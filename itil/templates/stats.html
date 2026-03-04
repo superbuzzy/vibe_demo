@@ -1,0 +1,65 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>题目统计</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="stats-page">
+  <header class="page-header">
+    <h1>做题统计</h1>
+    <p>当前覆盖题数：{{ total_questions }}（自动覆盖题库全部题目）</p>
+    <div class="header-actions">
+      <a href="{{ url_for('quiz_page') }}" class="primary-btn">继续做题</a>
+      <a href="{{ url_for('stats_page') }}" class="secondary-btn">刷新统计</a>
+    </div>
+  </header>
+
+  <main class="content">
+    <section class="card">
+      <div class="stats-hint">点击列头可切换升序/降序。</div>
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>
+                <a href="{{ url_for('stats_page', sort='question', order=next_orders['question']) }}" class="sort-link{% if sort_key == 'question' %} active{% endif %}">
+                  题号{% if sort_key == 'question' %} {{ '↑' if sort_order == 'asc' else '↓' }}{% endif %}
+                </a>
+              </th>
+              <th>题干</th>
+              <th>
+                <a href="{{ url_for('stats_page', sort='correct', order=next_orders['correct']) }}" class="sort-link{% if sort_key == 'correct' %} active{% endif %}">
+                  做对{% if sort_key == 'correct' %} {{ '↑' if sort_order == 'asc' else '↓' }}{% endif %}
+                </a>
+              </th>
+              <th>
+                <a href="{{ url_for('stats_page', sort='wrong', order=next_orders['wrong']) }}" class="sort-link{% if sort_key == 'wrong' %} active{% endif %}">
+                  做错{% if sort_key == 'wrong' %} {{ '↑' if sort_order == 'asc' else '↓' }}{% endif %}
+                </a>
+              </th>
+              <th>
+                <a href="{{ url_for('stats_page', sort='unanswered', order=next_orders['unanswered']) }}" class="sort-link{% if sort_key == 'unanswered' %} active{% endif %}">
+                  未作答{% if sort_key == 'unanswered' %} {{ '↑' if sort_order == 'asc' else '↓' }}{% endif %}
+                </a>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in stats_rows %}
+            <tr>
+              <td class="col-number">{{ row.question_number }}</td>
+              <td class="col-question">{{ row.question_text }}</td>
+              <td class="col-correct">{{ row.correct_count }}</td>
+              <td class="col-wrong">{{ row.wrong_count }}</td>
+              <td class="col-unanswered">{{ row.unanswered_count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

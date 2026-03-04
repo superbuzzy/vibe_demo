@@ -1,0 +1,109 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>答题结果</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="result-page">
+  <header class="page-header">
+    <h1>答题结果</h1>
+    <p class="score-line">总分：{{ score }}/{{ total }}</p>
+    <p class="ai-progress" id="ai-progress">AI解读进度：{{ ai_done_count }}/{{ ai_total_count }}</p>
+    <div class="header-actions">
+      <a href="{{ url_for('quiz_page') }}" class="primary-btn">再来一套 40 题</a>
+      <a href="{{ url_for('stats_page') }}" class="secondary-btn">查看统计</a>
+    </div>
+  </header>
+
+  <main class="content">
+    {% for item in results %}
+    <section class="card">
+      <div class="question-title">
+        {{ loop.index }}. {{ item.question_text }}
+      </div>
+      <div class="answer-meta">
+        你的答案：{{ item.user_answer if item.user_answer else "未作答" }}；
+        正确答案：{{ item.correct_answer }}
+      </div>
+      <div class="ai-explanation{% if item.ai_explanation == ai_placeholder %} pending{% endif %}" id="ai-wrap-{{ item.question_number }}">
+        <span class="ai-explanation-label">AI解读：</span>
+        <span class="ai-explanation-text" id="ai-text-{{ item.question_number }}">{{ item.ai_explanation }}</span>
+      </div>
+
+      {% for letter, text in item.options.items() %}
+        {% set row_class = "result-option" %}
+        {% if letter == item.correct_answer %}
+          {% set row_class = row_class + " right" %}
+        {% elif item.user_answer == letter and item.user_answer != item.correct_answer %}
+          {% set row_class = row_class + " wrong" %}
+        {% endif %}
+      <div class="{{ row_class }}">
+        <span class="option-letter">{{ letter }}</span>
+        <span class="option-text">{{ text }}</span>
+      </div>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </main>
+
+  <script>
+    (() => {
+      const examId = "{{ exam_id }}";
+      const progressNode = document.getElementById("ai-progress");
+      if (!examId || !progressNode) {
+        return;
+      }
+
+      let timer = null;
+      const applyProgress = (data) => {
+        const done = Number(data.done_count || 0);
+        const total = Number(data.total || 0);
+        progressNode.textContent = `AI解读进度：${done}/${total}`;
+
+        const explanations = data.explanations || {};
+        Object.keys(explanations).forEach((questionNumber) => {
+          const textNode = document.getElementById(`ai-text-${questionNumber}`);
+          const wrapNode = document.getElementById(`ai-wrap-${questionNumber}`);
+          if (textNode) {
+            textNode.textContent = explanations[questionNumber];
+          }
+          if (wrapNode) {
+            wrapNode.classList.remove("pending");
+          }
+        });
+
+        if (data.is_done && timer) {
+          clearInterval(timer);
+          timer = null;
+        }
+      };
+
+      const poll = async () => {
+        try {
+          const response = await fetch(`/api/exam/${encodeURIComponent(examId)}/ai-status`, {
+            method: "GET",
+            cache: "no-store",
+            headers: { "Accept": "application/json" }
+          });
+          if (!response.ok) {
+            if (timer) {
+              clearInterval(timer);
+              timer = null;
+            }
+            return;
+          }
+          const data = await response.json();
+          applyProgress(data);
+        } catch (_err) {
+          // ignore one-time network errors and continue polling
+        }
+      };
+
+      timer = setInterval(poll, 1200);
+      poll();
+    })();
+  </script>
+</body>
+</html>

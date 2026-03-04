@@ -1,0 +1,54 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ITIL 4 Foundation 模拟考试</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="quiz-page">
+  <header class="page-header">
+    <h1>ITIL 4 Foundation 中文模拟考试</h1>
+    <p>本次试卷共 {{ questions|length }} 题，单选题，每题 1 分。</p>
+  </header>
+
+  <main class="content">
+    <form action="{{ url_for('submit_quiz') }}" method="post" class="quiz-form">
+      <input type="hidden" name="exam_id" value="{{ exam_id }}">
+      {% for question in questions %}
+      <section class="card">
+        <div class="question-title">
+          {{ loop.index }}. {{ question['question_text'] }}
+        </div>
+        <input type="hidden" name="question_id" value="{{ question['id'] }}">
+
+        <label class="option-row">
+          <input type="radio" name="answer_{{ question['id'] }}" value="A">
+          <span class="option-letter">A</span>
+          <span class="option-text">{{ question['option_a'] }}</span>
+        </label>
+        <label class="option-row">
+          <input type="radio" name="answer_{{ question['id'] }}" value="B">
+          <span class="option-letter">B</span>
+          <span class="option-text">{{ question['option_b'] }}</span>
+        </label>
+        <label class="option-row">
+          <input type="radio" name="answer_{{ question['id'] }}" value="C">
+          <span class="option-letter">C</span>
+          <span class="option-text">{{ question['option_c'] }}</span>
+        </label>
+        <label class="option-row">
+          <input type="radio" name="answer_{{ question['id'] }}" value="D">
+          <span class="option-letter">D</span>
+          <span class="option-text">{{ question['option_d'] }}</span>
+        </label>
+      </section>
+      {% endfor %}
+
+      <div class="submit-row">
+        <button type="submit" class="primary-btn">提交试卷</button>
+      </div>
+    </form>
+  </main>
+</body>
+</html>
