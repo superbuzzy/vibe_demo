@@ -1,0 +1,11 @@
+services:
+  ragdemo-api:
+    image: ragdemo-api:0.1
+    container_name: ragdemo-api
+    ports:
+      - "6006:6006"
+    volumes:
+      - /home/ubuntu/demo/ragdemo/data:/app/data
+    env_file:
+      - .env.example
+    restart: unless-stopped

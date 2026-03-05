@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>配网 RAG 查询台</title>
+    <style>
+      :root {
+          color-scheme: light;
+          --bg: #f3f8ff;
+          --bg-deep: #d7e7ff;
+          --ink: #0b1b34;
+          --muted: #51627a;
+          --accent: #1e88e5;
+          --accent-strong: #1565c0;
+          --card: #ffffff;
+          --border: rgba(30, 136, 229, 0.22);
+          --shadow: 0 18px 40px rgba(10, 36, 78, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "STKaiti", "KaiTi", "SimSun", serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 20% 20%, #ffffff, transparent 45%),
+        radial-gradient(circle at 90% 10%, #e7f1ff, transparent 40%),
+        linear-gradient(140deg, var(--bg) 0%, var(--bg-deep) 100%);
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: absolute;
+        inset: auto;
+        width: 380px;
+        height: 380px;
+        border-radius: 45% 55% 60% 40%;
+        background: rgba(30, 136, 229, 0.14);
+        filter: blur(10px);
+        z-index: 0;
+      }
+
+      body::before {
+        top: -140px;
+        right: -120px;
+      }
+
+      body::after {
+        bottom: -160px;
+        left: -120px;
+        background: rgba(0, 170, 255, 0.12);
+      }
+
+      .shell {
+        position: relative;
+        z-index: 1;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 48px 24px 64px;
+      }
+
+      .hero {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 32px;
+        animation: rise 0.7s ease both;
+      }
+
+      .badge {
+        align-self: flex-start;
+        padding: 6px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(30, 136, 229, 0.35);
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--accent-strong);
+        letter-spacing: 0.05em;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      h1 {
+        font-size: clamp(28px, 3vw, 40px);
+        margin: 0;
+      }
+
+      .subtitle {
+        color: var(--muted);
+        font-size: 16px;
+        max-width: 720px;
+        margin: 0;
+      }
+
+      .grid {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        grid-template-areas:
+          "question answer"
+          "sources answer";
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 20px 22px;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        animation: rise 0.6s ease both;
+      }
+
+      .question {
+        grid-area: question;
+      }
+
+      .answer {
+        grid-area: answer;
+        min-height: 360px;
+      }
+
+      .sources {
+        grid-area: sources;
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 160px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(30, 136, 229, 0.22);
+        background: rgba(255, 255, 255, 0.8);
+        font-size: 15px;
+        resize: vertical;
+      }
+
+      textarea:focus {
+        outline: 2px solid rgba(30, 136, 229, 0.32);
+        border-color: rgba(30, 136, 229, 0.55);
+      }
+
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .upload-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .upload-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px dashed rgba(30, 136, 229, 0.55);
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--accent-strong);
+        font-size: 13px;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .upload-button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(21, 101, 192, 0.18);
+      }
+
+      .upload-button input {
+        display: none;
+      }
+
+      .upload-status {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      button {
+        border: none;
+        padding: 10px 18px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #fff;
+        font-size: 15px;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(21, 101, 192, 0.28);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .status {
+        min-height: 18px;
+        font-size: 13px;
+        color: var(--accent-strong);
+      }
+
+      .content {
+        font-size: 15px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .source-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .source {
+        border-left: 3px solid rgba(30, 136, 229, 0.65);
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .source-title {
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .source-meta {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .source-snippet {
+        font-size: 13px;
+        color: #18304f;
+      }
+
+      .empty {
+        font-size: 13px;
+        color: var(--muted);
+        padding: 8px 0;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+          grid-template-areas:
+            "question"
+            "answer"
+            "sources";
+        }
+
+        .answer {
+          min-height: 240px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div class="badge">DeepSeek API · 在线推理</div>
+        <h1>配网抢修 RAG 助手</h1>
+        <p class="subtitle">
+          直接输入问题，系统会检索本地知识库并展示回答与引用的 chunk。
+        </p>
+      </header>
+      <main class="grid">
+        <section class="card question" style="animation-delay: 0.1s;">
+          <h2>问题输入</h2>
+          <div class="upload-row">
+            <label class="upload-button">
+              <input
+                id="file-upload"
+                type="file"
+                multiple
+                accept=".pdf,.docx,.doc"
+              />
+              上传文件
+            </label>
+            <span id="upload-status" class="upload-status">支持 PDF/DOCX/DOC</span>
+          </div>
+          <textarea
+            id="question"
+            placeholder="例如：抢修人员到达现场后需要先做哪些安全检查？"
+          ></textarea>
+          <div class="controls">
+            <button id="ask">开始检索</button>
+            <span class="hint">Enter 发送 · Shift + Enter 换行</span>
+          </div>
+          <div id="status" class="status"></div>
+        </section>
+        <section class="card answer" style="animation-delay: 0.2s;">
+          <h2>模型回复</h2>
+          <div id="answer" class="content muted">等待提问...</div>
+        </section>
+        <section class="card sources" style="animation-delay: 0.3s;">
+          <h2>Chunk 引用</h2>
+          <div id="sources" class="source-list">
+            <div class="empty">暂无引用</div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script>
+      (() => {
+        const apiBase = `${window.location.protocol}//${window.location.hostname}:6006`;
+        const questionInput = document.getElementById("question");
+        const askBtn = document.getElementById("ask");
+        const answerBox = document.getElementById("answer");
+        const sourcesBox = document.getElementById("sources");
+        const status = document.getElementById("status");
+        const uploadInput = document.getElementById("file-upload");
+        const uploadStatus = document.getElementById("upload-status");
+
+        const setLoading = (loading) => {
+          askBtn.disabled = loading;
+          askBtn.textContent = loading ? "检索中..." : "开始检索";
+          if (loading) {
+            status.textContent = "正在检索，请稍候。";
+          }
+        };
+
+        const renderSources = (sources) => {
+          sourcesBox.innerHTML = "";
+          if (!sources || sources.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "empty";
+            empty.textContent = "暂无引用";
+            sourcesBox.appendChild(empty);
+            return;
+          }
+          sources.forEach((item, index) => {
+            const card = document.createElement("div");
+            card.className = "source";
+
+            const title = document.createElement("div");
+            title.className = "source-title";
+            title.textContent = item.source || `来源 ${index + 1}`;
+
+            const meta = document.createElement("div");
+            meta.className = "source-meta";
+            if (item.page !== null && item.page !== undefined) {
+              meta.textContent = `页码 ${item.page}`;
+            } else {
+              meta.textContent = "未标注页码";
+            }
+
+            const snippet = document.createElement("div");
+            snippet.className = "source-snippet";
+            snippet.textContent = item.snippet || "";
+
+            card.append(title, meta, snippet);
+            sourcesBox.appendChild(card);
+          });
+        };
+
+        const runQuery = async () => {
+          const question = questionInput.value.trim();
+          if (!question) {
+            status.textContent = "请先输入问题。";
+            questionInput.focus();
+            return;
+          }
+
+          setLoading(true);
+          answerBox.textContent = "正在检索...";
+          answerBox.classList.remove("muted");
+          renderSources([]);
+
+          try {
+            const response = await fetch(`${apiBase}/query`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ question }),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+              throw new Error(payload.detail || "请求失败");
+            }
+            answerBox.textContent = payload.answer || "未返回答案。";
+            renderSources(payload.sources || []);
+            status.textContent = "";
+          } catch (error) {
+            answerBox.textContent = "请求失败，请检查服务是否已启动。";
+            status.textContent = error.message || "请求异常";
+            renderSources([]);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        const uploadFiles = async (files) => {
+          if (!files || files.length === 0) {
+            return;
+          }
+          uploadInput.disabled = true;
+          uploadStatus.textContent = `正在上传 ${files.length} 个文件...`;
+          const formData = new FormData();
+          files.forEach((file) => formData.append("files", file));
+
+          try {
+            const response = await fetch(`${apiBase}/upload`, {
+              method: "POST",
+              body: formData,
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+              throw new Error(payload.detail || "上传失败");
+            }
+            const uploaded = payload.files ? payload.files.length : 0;
+            const chunks = payload.chunks_indexed ?? 0;
+            uploadStatus.textContent = `上传完成：${uploaded} 个文件，chunks ${chunks}`;
+          } catch (error) {
+            uploadStatus.textContent = error.message || "上传失败";
+          } finally {
+            uploadInput.value = "";
+            uploadInput.disabled = false;
+          }
+        };
+
+        askBtn.addEventListener("click", runQuery);
+        uploadInput.addEventListener("change", () => {
+          const files = Array.from(uploadInput.files || []);
+          uploadFiles(files);
+        });
+        questionInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            runQuery();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
